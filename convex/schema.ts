@@ -9,4 +9,9 @@ export default defineSchema({
   numbers: defineTable({
     value: v.number(),
   }),
+  waitlist: defineTable({
+    email: v.string(),
+    name: v.string(),
+    joinedAt: v.number(),
+  }).index("by_email", ["email"]),
 });

@@ -21,7 +21,7 @@
   1. The "Pre-Trade Readiness Score" blocking an impulsive trade.
   2. The "Emotional Trade Replay" showing red (anxious) and green (calm) dots on a chart.
   3. A notification of a message from an "Accountability Partner".
-- **Primary CTA (Call to Action):** A prominent button with the text: **"Start Your Free Trial"**
+- **Primary CTA (Call to Action):** A prominent button with the text: **"Open Your FREE Account"**
 
 ### **2. Problem / Agitation Section**
 
