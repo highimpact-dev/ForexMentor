@@ -21,6 +21,8 @@ interface TradeParams {
   quantity: number;
   stopLoss: number;
   takeProfit: number;
+  riskAmount: number;
+  riskPercentage: number;
 }
 
 export function TradePanel({
@@ -65,6 +67,8 @@ export function TradePanel({
       quantity: positionSize,
       stopLoss: stopLossPrice,
       takeProfit: takeProfitPrice,
+      riskAmount,
+      riskPercentage,
     };
 
     onTrade(tradeParams);

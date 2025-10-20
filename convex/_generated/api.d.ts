@@ -16,6 +16,9 @@ import type * as inviteCodes from "../inviteCodes.js";
 import type * as inviteRequests from "../inviteRequests.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as security from "../security.js";
+import type * as tradeHistory from "../tradeHistory.js";
+import type * as tradeMonitoring from "../tradeMonitoring.js";
+import type * as trades from "../trades.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as waitlist from "../waitlist.js";
 
@@ -42,6 +45,9 @@ declare const fullApi: ApiFromModules<{
   inviteRequests: typeof inviteRequests;
   myFunctions: typeof myFunctions;
   security: typeof security;
+  tradeHistory: typeof tradeHistory;
+  tradeMonitoring: typeof tradeMonitoring;
+  trades: typeof trades;
   userProfiles: typeof userProfiles;
   waitlist: typeof waitlist;
 }>;

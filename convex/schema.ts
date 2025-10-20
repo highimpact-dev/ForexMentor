@@ -172,11 +172,18 @@ export default defineSchema({
       v.literal("closed"),
       v.literal("cancelled")
     ),
+    closeReason: v.optional(v.union(
+      v.literal("manual"),
+      v.literal("stop_loss_hit"),
+      v.literal("take_profit_hit"),
+      v.literal("cancelled")
+    )),
     profitLoss: v.optional(v.number()),
     profitLossPercentage: v.optional(v.number()),
     entryTime: v.number(),
     exitTime: v.optional(v.number()),
     notes: v.optional(v.string()),
+    exitNotes: v.optional(v.string()), // Notes added when closing
     // AI analysis (added after trade closes)
     aiAnalysis: v.optional(v.string()),
     aiAnalysisRating: v.optional(v.number()), // 1-5 stars
@@ -200,4 +207,48 @@ export default defineSchema({
   })
     .index("by_user_id", ["userId"])
     .index("by_user_and_timestamp", ["userId", "timestamp"]),
+
+  // Trade modification history / audit trail
+  tradeHistory: defineTable({
+    tradeId: v.id("trades"),
+    userId: v.string(),
+    symbol: v.string(),
+    // Action type
+    action: v.union(
+      v.literal("trade_opened"),
+      v.literal("stop_loss_modified"),
+      v.literal("take_profit_modified"),
+      v.literal("trade_closed_manual"),
+      v.literal("trade_closed_sl_hit"),
+      v.literal("trade_closed_tp_hit"),
+      v.literal("trade_cancelled"),
+      v.literal("notes_added")
+    ),
+    timestamp: v.number(),
+    // Market context
+    priceAtAction: v.number(),
+    // Modification details (for SL/TP changes)
+    oldValue: v.optional(v.number()),
+    newValue: v.optional(v.number()),
+    changeDirection: v.optional(v.union(
+      v.literal("tightened"),
+      v.literal("widened"),
+      v.literal("moved_closer"),
+      v.literal("moved_further")
+    )),
+    changeMagnitude: v.optional(v.number()), // Pips/points changed
+    // Exit details (for closes)
+    exitPrice: v.optional(v.number()),
+    profitLoss: v.optional(v.number()),
+    profitLossPercentage: v.optional(v.number()),
+    timeInTrade: v.optional(v.number()), // Seconds
+    // User context
+    userNotes: v.optional(v.string()),
+    // Behavioral metadata (JSON string for flexibility)
+    metadata: v.optional(v.string()), // Stringified JSON object
+  })
+    .index("by_trade_id", ["tradeId"])
+    .index("by_user_id", ["userId"])
+    .index("by_user_and_timestamp", ["userId", "timestamp"])
+    .index("by_trade_and_timestamp", ["tradeId", "timestamp"]),
 });

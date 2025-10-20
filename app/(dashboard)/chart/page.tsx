@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAction } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { TradingChart } from "@/components/trading/TradingChart";
 import { ChartControls } from "@/components/trading/ChartControls";
 import { TradePanel } from "@/components/trading/TradePanel";
+import { TradeList } from "@/components/trading/TradeList";
 import { IndicatorPanel } from "@/components/trading/IndicatorPanel";
 import {
   TimeframeKey,
@@ -55,8 +56,25 @@ export default function ChartPage() {
     DEFAULT_CROSSHAIR_SETTINGS
   );
 
-  // Trades state
-  const [trades, setTrades] = useState<Trade[]>([]);
+  // Convex mutations and queries for trades
+  const createTrade = useMutation(api.trades.createTrade);
+  const openTradesQuery = useQuery(api.trades.getOpenTradesForSymbol, { symbol: selectedSymbol });
+
+  // Transform database trades to local Trade format
+  const trades: Trade[] = (openTradesQuery || []).map((dbTrade) => ({
+    id: dbTrade._id,
+    symbol: dbTrade.symbol,
+    direction: dbTrade.direction,
+    status: dbTrade.status,
+    entryPrice: dbTrade.entryPrice,
+    quantity: dbTrade.positionSize,
+    stopLoss: dbTrade.stopLoss || 0,
+    takeProfit: dbTrade.takeProfit || 0,
+    entryTime: dbTrade.entryTime,
+    exitTime: dbTrade.exitTime,
+    exitPrice: dbTrade.exitPrice,
+    pnl: dbTrade.profitLoss,
+  }));
 
   // Error dialog state
   const [errorDialog, setErrorDialog] = useState<{
@@ -547,30 +565,42 @@ export default function ChartPage() {
   }, [isLive, useWebSocket, wsConnected, updateLivePrice]);
 
   // Handle trade execution
-  const handleTrade = useCallback((tradeParams: {
+  const handleTrade = useCallback(async (tradeParams: {
     direction: "long" | "short";
     quantity: number;
     stopLoss: number;
     takeProfit: number;
+    riskAmount: number;
+    riskPercentage: number;
   }) => {
-    const newTrade: Trade = {
-      id: generateTradeId(),
-      symbol: selectedSymbol,
-      direction: tradeParams.direction,
-      status: "open",
-      entryPrice: currentPrice,
-      quantity: tradeParams.quantity,
-      stopLoss: tradeParams.stopLoss,
-      takeProfit: tradeParams.takeProfit,
-      entryTime: Math.floor(Date.now() / 1000),
-    };
+    try {
+      const entryTime = Math.floor(Date.now() / 1000);
 
-    console.log("Trade executed:", newTrade);
-    setTrades((prev) => [...prev, newTrade]);
+      // Save trade to database
+      const tradeId = await createTrade({
+        symbol: selectedSymbol,
+        direction: tradeParams.direction,
+        entryPrice: currentPrice,
+        positionSize: tradeParams.quantity,
+        stopLoss: tradeParams.stopLoss,
+        takeProfit: tradeParams.takeProfit,
+        riskAmount: tradeParams.riskAmount,
+        riskPercentage: tradeParams.riskPercentage,
+        entryTime,
+      });
 
-    // TODO: Implement trade execution via Convex mutation
-    // This will be connected to the trades table in the schema
-  }, [selectedSymbol, currentPrice]);
+      console.log("Trade saved to database:", tradeId);
+
+      // The query will automatically update to show the new trade
+    } catch (error) {
+      console.error("Error creating trade:", error);
+      setErrorDialog({
+        open: true,
+        title: "Failed to Place Trade",
+        message: error instanceof Error ? error.message : "Unable to place trade. Please try again.",
+      });
+    }
+  }, [selectedSymbol, currentPrice, createTrade]);
 
   // Indicator handlers
   const handleAddIndicator = useCallback(async (indicator: IndicatorConfig) => {
