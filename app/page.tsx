@@ -3,7 +3,7 @@ import { ProblemSection } from "@/components/landing/ProblemSection";
 import { SolutionSection } from "@/components/landing/SolutionSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
-import { WaitlistSection } from "@/components/landing/WaitlistSection";
+import { InviteRequestForm } from "@/components/landing/InviteRequestForm";
 import { FAQSection } from "@/components/landing/FAQSection";
 
 export default function Home() {
@@ -14,7 +14,7 @@ export default function Home() {
       <SolutionSection />
       <HowItWorksSection />
       <TestimonialsSection />
-      <WaitlistSection />
+      <InviteRequestForm />
       <FAQSection />
     </main>
   );

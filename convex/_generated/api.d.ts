@@ -8,7 +8,15 @@
  * @module
  */
 
+import type * as emails from "../emails.js";
+import type * as forex from "../forex.js";
+import type * as forexQueries from "../forexQueries.js";
+import type * as indicators from "../indicators.js";
+import type * as inviteCodes from "../inviteCodes.js";
+import type * as inviteRequests from "../inviteRequests.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as security from "../security.js";
+import type * as userProfiles from "../userProfiles.js";
 import type * as waitlist from "../waitlist.js";
 
 import type {
@@ -26,7 +34,15 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  emails: typeof emails;
+  forex: typeof forex;
+  forexQueries: typeof forexQueries;
+  indicators: typeof indicators;
+  inviteCodes: typeof inviteCodes;
+  inviteRequests: typeof inviteRequests;
   myFunctions: typeof myFunctions;
+  security: typeof security;
+  userProfiles: typeof userProfiles;
   waitlist: typeof waitlist;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
