@@ -66,50 +66,118 @@ export const DEFAULT_TRADING_PAIRS = [
 ] as const;
 
 /**
+ * Get the actual computed background color from the theme
+ */
+function getThemeBackgroundColor(): string {
+  if (typeof window === 'undefined') return '';
+
+  // Get the computed background color from the body or root element
+  const bgColor = getComputedStyle(document.body).backgroundColor;
+
+  // If we got a valid color, return it
+  if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+    return bgColor;
+  }
+
+  return '';
+}
+
+/**
+ * Convert rgb/rgba string to hex
+ */
+function rgbToHex(rgb: string): string {
+  const match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/);
+  if (!match) return rgb;
+
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+
+  return '#' + [r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+}
+
+/**
+ * Get theme colors with fallback
+ */
+function getThemeColors(isDark: boolean) {
+  // Try to get the actual background color from the DOM
+  const bgColor = getThemeBackgroundColor();
+
+  if (bgColor) {
+    const hexBg = bgColor.startsWith('rgb') ? rgbToHex(bgColor) : bgColor;
+
+    // Calculate derived colors based on the background
+    // For dark mode, lighten the background for grid lines
+    // For light mode, darken slightly
+    return {
+      background: hexBg,
+      gridLines: isDark ? '#1a1a2e' : '#f1f1f1',
+      text: isDark ? '#b3b3c2' : '#2b2b3d',
+      borderColor: isDark ? '#2a2a3e' : '#e0e0e0',
+    };
+  }
+
+  // Fallback if we can't read from DOM
+  return {
+    background: isDark ? '#0d0d1a' : '#ffffff',
+    gridLines: isDark ? '#1a1a2e' : '#f1f1f1',
+    text: isDark ? '#b3b3c2' : '#2b2b3d',
+    borderColor: isDark ? '#2a2a3e' : '#e0e0e0',
+  };
+}
+
+/**
  * Chart theme configuration
  */
-export const getChartOptions = (isDark: boolean): DeepPartial<ChartOptions> => ({
-  layout: {
-    background: { type: ColorType.Solid, color: isDark ? "#0a0a0a" : "#ffffff" },
-    textColor: isDark ? "#d1d5db" : "#374151",
-  },
-  grid: {
-    vertLines: { color: isDark ? "#1f1f1f" : "#f3f4f6" },
-    horzLines: { color: isDark ? "#1f1f1f" : "#f3f4f6" },
-  },
-  crosshair: {
-    mode: 1, // Normal crosshair
-    vertLine: {
-      width: 1,
-      color: isDark ? "#4b5563" : "#9ca3af",
-      style: 3, // Dashed
+export const getChartOptions = (isDark: boolean): DeepPartial<ChartOptions> => {
+  const colors = getThemeColors(isDark);
+
+  return {
+    layout: {
+      background: { type: ColorType.Solid, color: colors.background },
+      textColor: colors.text,
     },
-    horzLine: {
-      width: 1,
-      color: isDark ? "#4b5563" : "#9ca3af",
-      style: 3, // Dashed
+    grid: {
+      vertLines: { color: colors.gridLines },
+      horzLines: { color: colors.gridLines },
     },
-  },
-  timeScale: {
-    borderColor: isDark ? "#1f1f1f" : "#e5e7eb",
-    timeVisible: true,
-    secondsVisible: false,
-  },
-  rightPriceScale: {
-    borderColor: isDark ? "#1f1f1f" : "#e5e7eb",
-  },
-  handleScroll: {
-    mouseWheel: true,
-    pressedMouseMove: true,
-    horzTouchDrag: true,
-    vertTouchDrag: true,
-  },
-  handleScale: {
-    axisPressedMouseMove: true,
-    mouseWheel: true,
-    pinch: true,
-  },
-});
+    crosshair: {
+      mode: 1, // Normal crosshair
+      vertLine: {
+        width: 1,
+        color: isDark ? "#4b5563" : "#9ca3af",
+        style: 3, // Dashed
+      },
+      horzLine: {
+        width: 1,
+        color: isDark ? "#4b5563" : "#9ca3af",
+        style: 3, // Dashed
+      },
+    },
+    timeScale: {
+      borderColor: colors.borderColor,
+      timeVisible: true,
+      secondsVisible: false,
+    },
+    rightPriceScale: {
+      borderColor: colors.borderColor,
+    },
+    handleScroll: {
+      mouseWheel: true,
+      pressedMouseMove: true,
+      horzTouchDrag: true,
+      vertTouchDrag: true,
+    },
+    handleScale: {
+      axisPressedMouseMove: true,
+      mouseWheel: true,
+      pinch: true,
+    },
+  };
+};
 
 /**
  * Candlestick series options

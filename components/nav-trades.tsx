@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { TrendingUp, TrendingDown, ChevronRight } from "lucide-react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,6 +25,9 @@ export function NavTrades() {
   const trades = useQuery(api.trades.getUserTrades, { status: "open" })
   const [selectedTradeId, setSelectedTradeId] = useState<Id<"trades"> | null>(null)
   const { getPrice, subscribeToSymbol, unsubscribeFromSymbol } = usePrice()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   // Subscribe to price updates for all open trades
   useEffect(() => {
@@ -96,7 +100,23 @@ export function NavTrades() {
                     <SidebarMenuButton
                       onClick={(e) => {
                         e.preventDefault()
-                        setSelectedTradeId(trade._id)
+
+                        // Check if we're on the chart page
+                        const isOnChartPage = pathname === '/chart'
+
+                        // Get current symbol from URL or default to null
+                        const currentSymbol = searchParams.get('symbol')
+
+                        // Check if we're already viewing this trade's symbol
+                        const isOnCorrectSymbol = currentSymbol === trade.symbol
+
+                        // Navigate to the chart page with the trade's symbol
+                        router.push(`/chart?symbol=${trade.symbol}`)
+
+                        // Only open the modal if we're already on the chart page with the correct symbol
+                        if (isOnChartPage && isOnCorrectSymbol) {
+                          setSelectedTradeId(trade._id)
+                        }
                       }}
                       className="h-auto py-2.5 hover:bg-accent cursor-pointer"
                     >

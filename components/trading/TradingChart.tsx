@@ -246,6 +246,11 @@ export function TradingChart({
   // Track the last data length to detect new bars vs updates
   const lastDataLengthRef = useRef(0);
 
+  // Reset the last data length ref when symbol or timeframe changes
+  useEffect(() => {
+    lastDataLengthRef.current = 0;
+  }, [symbol, timeframe]);
+
   // Update data when it changes
   useEffect(() => {
     if (!seriesRef.current || data.length === 0) return;
@@ -682,11 +687,16 @@ export function TradingChart({
         crosshairMarkerVisible: false,
       });
 
-      // Set data with just two points
-      const lineData: LineData[] = [
-        { time: line.point1.time as any, value: line.point1.price },
-        { time: line.point2.time as any, value: line.point2.price },
-      ];
+      // Ensure points are in ascending time order (required by TradingView)
+      const lineData: LineData[] = line.point1.time < line.point2.time
+        ? [
+            { time: line.point1.time as any, value: line.point1.price },
+            { time: line.point2.time as any, value: line.point2.price },
+          ]
+        : [
+            { time: line.point2.time as any, value: line.point2.price },
+            { time: line.point1.time as any, value: line.point1.price },
+          ];
 
       lineSeries.setData(lineData);
       currentLineSeries.set(line.id, lineSeries);

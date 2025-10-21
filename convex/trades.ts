@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { mutation, query, internalMutation, action } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 import {
   calculateSLChangeDirection,
   calculateTPChangeDirection,
@@ -114,6 +114,139 @@ export const getUserTrades = query({
       .withIndex("by_user_id", (q) => q.eq("userId", identity.subject))
       .order("desc")
       .collect();
+  },
+});
+
+/**
+ * Get ALL open trades for the current user (across all symbols)
+ * Used for calculating account balance and equity
+ */
+export const getAllOpenTrades = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("trades"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      symbol: v.string(),
+      direction: v.union(v.literal("long"), v.literal("short")),
+      entryPrice: v.number(),
+      exitPrice: v.optional(v.number()),
+      positionSize: v.number(),
+      stopLoss: v.optional(v.number()),
+      takeProfit: v.optional(v.number()),
+      riskAmount: v.number(),
+      riskPercentage: v.number(),
+      status: v.union(v.literal("open"), v.literal("closed"), v.literal("cancelled")),
+      profitLoss: v.optional(v.number()),
+      profitLossPercentage: v.optional(v.number()),
+      entryTime: v.number(),
+      exitTime: v.optional(v.number()),
+      notes: v.optional(v.string()),
+      aiAnalysis: v.optional(v.string()),
+      aiAnalysisRating: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Get all open trades for this user
+    return await ctx.db
+      .query("trades")
+      .withIndex("by_user_and_status", (q) =>
+        q.eq("userId", identity.subject).eq("status", "open")
+      )
+      .collect();
+  },
+});
+
+/**
+ * Calculate account equity by fetching current prices for all open trades
+ * This action gets all open trades and calculates total unrealized P&L
+ */
+export const calculateAccountEquity = action({
+  args: {
+    accountBalance: v.number(),
+  },
+  returns: v.object({
+    balance: v.number(),
+    equity: v.number(),
+    available: v.number(),
+    totalRisk: v.number(),
+    totalUnrealizedPnL: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Get all open trades
+    const openTrades = await ctx.runQuery(api.trades.getAllOpenTrades);
+
+    if (openTrades.length === 0) {
+      return {
+        balance: args.accountBalance,
+        equity: args.accountBalance,
+        available: args.accountBalance,
+        totalRisk: 0,
+        totalUnrealizedPnL: 0,
+      };
+    }
+
+    // Get unique symbols from open trades
+    const uniqueSymbols = [...new Set(openTrades.map((t) => t.symbol))];
+
+    // Fetch current prices for all symbols
+    const pricePromises = uniqueSymbols.map((symbol) =>
+      ctx.runAction(api.forex.getLatestPrice, { symbol })
+        .catch((err) => {
+          console.error(`Failed to get price for ${symbol}:`, err);
+          return null;
+        })
+    );
+
+    const prices = await Promise.all(pricePromises);
+
+    // Create a map of symbol -> price
+    const priceMap: Record<string, number> = {};
+    uniqueSymbols.forEach((symbol, index) => {
+      if (prices[index]) {
+        priceMap[symbol] = prices[index]!.price;
+      }
+    });
+
+    // Calculate total unrealized P&L and total risk
+    let totalUnrealizedPnL = 0;
+    let totalRisk = 0;
+
+    for (const trade of openTrades) {
+      totalRisk += trade.riskAmount;
+
+      const currentPrice = priceMap[trade.symbol];
+      if (!currentPrice) {
+        console.warn(`No price available for ${trade.symbol}, skipping P&L calculation`);
+        continue;
+      }
+
+      // Calculate P&L
+      const priceDiff =
+        trade.direction === "long"
+          ? currentPrice - trade.entryPrice
+          : trade.entryPrice - currentPrice;
+      const tradePnL = priceDiff * trade.positionSize * 100000; // Standard lot calculation
+
+      totalUnrealizedPnL += tradePnL;
+    }
+
+    const equity = args.accountBalance + totalUnrealizedPnL;
+    const available = args.accountBalance - totalRisk;
+
+    return {
+      balance: args.accountBalance,
+      equity,
+      available,
+      totalRisk,
+      totalUnrealizedPnL,
+    };
   },
 });
 

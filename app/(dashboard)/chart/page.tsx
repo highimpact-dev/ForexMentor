@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useSearchParams, useRouter } from "next/navigation";
 import { TradingChart } from "@/components/trading/TradingChart";
-import { ChartControls } from "@/components/trading/ChartControls";
+import { ChartToolbar } from "@/components/trading/ChartToolbar";
 import { TradePanel } from "@/components/trading/TradePanel";
 import { TradeList } from "@/components/trading/TradeList";
-import { IndicatorPanel } from "@/components/trading/IndicatorPanel";
 import {
   TimeframeKey,
   TIMEFRAMES,
@@ -20,8 +20,6 @@ import { CrosshairSettings, DEFAULT_CROSSHAIR_SETTINGS } from "@/lib/chart-setti
 import { Trade, generateTradeId } from "@/lib/trade-types";
 import { CandlestickData } from "lightweight-charts";
 import { useForexWebSocket } from "@/hooks/useForexWebSocket";
-import { DrawingToolbar } from "@/components/trading/DrawingToolbar";
-import { ChartSettings } from "@/components/trading/ChartSettings";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +31,8 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function ChartPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [selectedSymbol, setSelectedSymbol] = useState<string>("EURUSD");
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeframeKey>("1h");
   const [chartData, setChartData] = useState<CandlestickData[]>([]);
@@ -56,9 +56,23 @@ export default function ChartPage() {
     DEFAULT_CROSSHAIR_SETTINGS
   );
 
+  // Trade panel collapse state
+  const [tradePanelCollapsed, setTradePanelCollapsed] = useState(false);
+
+  // Account balance state
+  const accountBalance = 10000; // This would come from user account in production
+
   // Convex mutations and queries for trades
   const createTrade = useMutation(api.trades.createTrade);
   const openTradesQuery = useQuery(api.trades.getOpenTradesForSymbol, { symbol: selectedSymbol });
+
+  // Calculate account equity using action
+  const calculateEquity = useAction(api.trades.calculateAccountEquity);
+  const [accountInfo, setAccountInfo] = useState({
+    balance: accountBalance,
+    equity: accountBalance,
+    available: accountBalance,
+  });
 
   // Transform database trades to local Trade format
   const trades: Trade[] = (openTradesQuery || []).map((dbTrade) => ({
@@ -75,6 +89,46 @@ export default function ChartPage() {
     exitPrice: dbTrade.exitPrice,
     pnl: dbTrade.profitLoss,
   }));
+
+  // Handler for symbol changes from the ticker selector
+  const handleSymbolChange = useCallback((newSymbol: string) => {
+    // Update the URL with the new symbol
+    router.push(`/chart?symbol=${newSymbol}`);
+    // Update the state
+    setSelectedSymbol(newSymbol);
+  }, [router]);
+
+  // Handle URL parameter for symbol (from external navigation like clicking a trade)
+  useEffect(() => {
+    const urlSymbol = searchParams.get('symbol');
+    if (urlSymbol && urlSymbol !== selectedSymbol) {
+      setSelectedSymbol(urlSymbol);
+    }
+  }, [searchParams, selectedSymbol]);
+
+  // Update account equity periodically
+  useEffect(() => {
+    const updateAccountEquity = async () => {
+      try {
+        const result = await calculateEquity({ accountBalance });
+        setAccountInfo({
+          balance: result.balance,
+          equity: result.equity,
+          available: result.available,
+        });
+      } catch (error) {
+        console.error("Error calculating equity:", error);
+      }
+    };
+
+    // Update immediately
+    updateAccountEquity();
+
+    // Update every 5 seconds
+    const interval = setInterval(updateAccountEquity, 5000);
+
+    return () => clearInterval(interval);
+  }, [calculateEquity, accountBalance]);
 
   // Error dialog state
   const [errorDialog, setErrorDialog] = useState<{
@@ -468,12 +522,16 @@ export default function ChartPage() {
 
   // Fetch data when symbol or timeframe changes
   useEffect(() => {
+    // Clear chart data immediately when symbol/timeframe changes
+    setChartData([]);
+    setCurrentPrice(0);
     setIsLive(true); // Re-enable live mode when fetching new data
     fetchChartData();
     // Clear indicators when changing symbol/timeframe - user will need to re-add them
     setIndicators([]);
     setIndicatorData(new Map());
-  }, [fetchChartData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSymbol, selectedTimeframe]); // Only trigger when symbol or timeframe changes
 
   // Update chart with latest price
   const updateLivePrice = useCallback(async () => {
@@ -794,10 +852,8 @@ export default function ChartPage() {
   }, []);
 
   const handleClearAllDrawings = useCallback(() => {
-    if (drawings.length > 0 && confirm(`Delete all ${drawings.length} drawings?`)) {
-      setDrawings([]);
-    }
-  }, [drawings.length]);
+    setDrawings([]);
+  }, []);
 
   // Crosshair settings handler
   const handleUpdateCrosshair = useCallback((settings: CrosshairSettings) => {
@@ -825,43 +881,34 @@ export default function ChartPage() {
         </div>
       )}
 
-      {/* Header with controls */}
-      <ChartControls
+      {/* Consolidated chart toolbar */}
+      <ChartToolbar
         selectedSymbol={selectedSymbol}
         selectedTimeframe={selectedTimeframe}
-        onSymbolChange={setSelectedSymbol}
+        onSymbolChange={handleSymbolChange}
         onTimeframeChange={setSelectedTimeframe}
-      />
-
-      {/* Indicator Panel */}
-      <IndicatorPanel
+        accountBalance={accountInfo.balance}
+        equity={accountInfo.equity}
+        available={accountInfo.available}
         indicators={indicators}
         onAddIndicator={handleAddIndicator}
         onRemoveIndicator={handleRemoveIndicator}
         onToggleIndicator={handleToggleIndicator}
         onUpdateIndicator={handleUpdateIndicator}
-      />
-
-      {/* Drawing Toolbar */}
-      <DrawingToolbar
         drawingMode={drawingMode}
         drawings={drawings}
         onModeChange={handleDrawingModeChange}
         onDeleteDrawing={handleDeleteDrawing}
         onUpdateDrawing={handleUpdateDrawing}
         onClearAllDrawings={handleClearAllDrawings}
-      />
-
-      {/* Chart Settings */}
-      <ChartSettings
         crosshairSettings={crosshairSettings}
         onUpdateCrosshair={handleUpdateCrosshair}
       />
 
-      {/* Main content area - stacks vertically on mobile, horizontal on desktop */}
-      <div className="flex flex-col lg:flex-row lg:flex-1 gap-4 lg:min-h-0 lg:overflow-hidden pb-4 lg:pb-0">
+      {/* Main content area - stacks vertically on mobile, grid on desktop */}
+      <div className={`flex flex-col lg:grid lg:flex-1 gap-4 lg:min-h-0 pb-4 lg:pb-0 transition-[grid-template-columns] duration-500 ease-in-out ${tradePanelCollapsed ? 'lg:grid-cols-[1fr_0px]' : 'lg:grid-cols-[1fr_320px]'}`}>
         {/* Chart area - takes most of the space */}
-        <div className="flex-1 h-[50vh] lg:h-auto lg:min-h-0 min-w-0">
+        <div className="h-[50vh] lg:h-auto lg:min-h-0 min-w-0 relative">
           <TradingChart
             data={chartData}
             symbol={selectedSymbol}
@@ -881,17 +928,41 @@ export default function ChartPage() {
             trades={trades}
             currentPrice={currentPrice}
           />
+
+          {/* Toggle button - hidden on mobile, visible on desktop */}
+          <button
+            onClick={() => setTradePanelCollapsed(!tradePanelCollapsed)}
+            className="hidden lg:flex absolute top-4 right-4 z-20 items-center gap-2 bg-background/90 backdrop-blur-sm px-3 py-2 rounded-lg border border-border shadow-lg hover:bg-muted transition-colors text-xs font-medium"
+          >
+            {tradePanelCollapsed ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+                Show Trade Panel
+              </>
+            ) : (
+              <>
+                Hide Trade Panel
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Trade panel - full width on mobile, fixed width on desktop */}
-        <div className="w-full lg:w-80 flex-shrink-0 lg:overflow-y-auto">
-          <TradePanel
-            symbol={selectedSymbol}
-            currentPrice={currentPrice}
-            pipSize={pipSize}
-            accountBalance={10000}
-            onTrade={handleTrade}
-          />
+        {/* Trade panel - full width on mobile, fixed width on desktop, collapsible on desktop */}
+        <div className={`w-full lg:overflow-hidden transition-opacity duration-500 ${tradePanelCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <div className="lg:overflow-y-auto h-full w-[320px]">
+            <TradePanel
+              symbol={selectedSymbol}
+              currentPrice={currentPrice}
+              pipSize={pipSize}
+              accountBalance={10000}
+              onTrade={handleTrade}
+            />
+          </div>
         </div>
       </div>
 
