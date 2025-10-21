@@ -4,7 +4,6 @@ import { DeepPartial, ChartOptions, ColorType } from "lightweight-charts";
  * Timeframe configuration
  */
 export const TIMEFRAMES = {
-  "1m": { label: "1m", multiplier: 1, timespan: "minute", display: "1 Minute" },
   "5m": { label: "5m", multiplier: 5, timespan: "minute", display: "5 Minutes" },
   "15m": { label: "15m", multiplier: 15, timespan: "minute", display: "15 Minutes" },
   "1h": { label: "1h", multiplier: 1, timespan: "hour", display: "1 Hour" },
@@ -244,21 +243,70 @@ export function formatTimestamp(timestamp: number): string {
 
 /**
  * Get date range for chart data fetch
- * Simply go back N days to get enough bars
+ * Calculate days back based on timeframe and desired number of bars
+ *
+ * IMPORTANT: Convex has a hard limit of 8,192 items in return arrays
+ * So we cap bars to ~7500-8000 to stay under the limit while maximizing data
  */
 export function getDateRange(
   timeframe: TimeframeKey,
-  barsToFetch: number = 150
+  barsToFetch: number = 7500 // Fetch close to Convex's 8192 limit for max historical data
 ): { from: string; to: string } {
   const now = new Date();
-  const to = now.toISOString().split("T")[0]; // Today
+  const to = now.toISOString().split("T")[0]; // Today in UTC (Polygon accepts future dates)
 
-  // Go back 30 days to ensure we get enough bars
-  const daysBack = 30;
-  const from = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  // Ensure we don't exceed Convex's array limit of 8,192
+  const maxBars = 8000; // Leave small buffer under 8192
+  const safeBarsToFetch = Math.min(barsToFetch, maxBars);
+
+  // Calculate days back based on timeframe to get the requested number of bars
+  let daysBack: number;
+
+  switch (timeframe) {
+    case "1m":
+      // 1 minute bars: ~1440 bars per day (24 * 60)
+      // 7500 bars = ~5.2 days
+      daysBack = Math.ceil(safeBarsToFetch / 1440);
+      break;
+    case "5m":
+      // 5 minute bars: ~288 bars per day (24 * 60 / 5)
+      // 7500 bars = ~26 days
+      daysBack = Math.ceil(safeBarsToFetch / 288);
+      break;
+    case "15m":
+      // 15 minute bars: ~96 bars per day (24 * 60 / 15)
+      // 7500 bars = ~78 days (~2.5 months)
+      daysBack = Math.ceil(safeBarsToFetch / 96);
+      break;
+    case "1h":
+      // 1 hour bars: 24 bars per day
+      // 7500 bars = 312 days (~10 months)
+      daysBack = Math.ceil(safeBarsToFetch / 24);
+      break;
+    case "4h":
+      // 4 hour bars: 6 bars per day
+      // 7500 bars = 1250 days (~3.4 years)
+      daysBack = Math.ceil(safeBarsToFetch / 6);
+      break;
+    case "1d":
+      // Daily bars: 1 bar per day
+      // 7500 bars = ~20.5 years (capped at 2 years below)
+      daysBack = safeBarsToFetch;
+      break;
+    default:
+      daysBack = 365; // Default to 1 year
+  }
+
+  // Cap at 3.5 years maximum - this allows 4h charts to fetch max bars while staying under Convex limit
+  // For 4h timeframe: 7500 bars / 6 bars per day = 1250 days (~3.4 years)
+  const maxDaysBack = 1300; // ~3.5 years
+  daysBack = Math.min(daysBack, maxDaysBack);
+
+  const fromDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+  const from = fromDate.toISOString().split("T")[0];
 
   return {
-    from: from.toISOString().split("T")[0],
+    from,
     to,
   };
 }

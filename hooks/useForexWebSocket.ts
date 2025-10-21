@@ -197,13 +197,13 @@ export function useForexWebSocket({
             });
           }
         } catch (error) {
-          console.error("[WebSocket] Error parsing message:", error);
+          // Error parsing message - silently handle
           onError?.(error as Error);
         }
       };
 
       ws.onerror = (event) => {
-        console.error("[WebSocket] Error event:", event);
+        // WebSocket error - silently handle
         isConnectingRef.current = false;
         const error = new Error(`WebSocket error: ${event.type}`);
         onError?.(error);
@@ -229,10 +229,7 @@ export function useForexWebSocket({
 
           // Only give up after multiple consecutive failures
           if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) {
-            console.error(
-              `[WebSocket] Failed ${MAX_CONSECUTIVE_FAILURES} times consecutively. Giving up.\n` +
-              "Falling back to REST API polling (5-second updates)."
-            );
+            // Failed too many times - fall back to REST API polling
             subscriptionErrorRef.current = true;
             onSubscriptionError?.(true);
             updateStatus("error");
@@ -259,7 +256,7 @@ export function useForexWebSocket({
         }
       };
     } catch (error) {
-      console.error("[WebSocket] Connection error:", error);
+      // Connection error - silently handle
       isConnectingRef.current = false;
       onError?.(error as Error);
       updateStatus("error");
