@@ -21,6 +21,17 @@ export const metadata: Metadata = {
   icons: {
     icon: "/convex.svg",
   },
+  openGraph: {
+    type: "website",
+    title: "ForexMentor - Forex Trading Platform",
+    description: "Learn forex trading with real-time charts and technical analysis",
+    siteName: "ForexMentor",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ForexMentor - Forex Trading Platform",
+    description: "Learn forex trading with real-time charts and technical analysis",
+  },
 };
 
 export const viewport = {

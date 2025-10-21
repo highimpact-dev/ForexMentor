@@ -149,10 +149,21 @@ export const getForexAggregates = action({
         }
 
         if (data.results && data.results.length > 0) {
-          allResults.push(...data.results);
-          console.log(`[Polygon API] Page ${pageCount}: Received ${data.results.length} bars (total: ${allResults.length})`);
+          // Check if adding this page would exceed the limit
+          const remainingSpace = MAX_BARS_LIMIT - allResults.length;
 
-          // Stop fetching if we've exceeded the limit - we'll truncate later
+          if (remainingSpace <= 0) {
+            // Already at limit, stop fetching
+            console.log(`[Polygon API] Already at ${allResults.length} bars, stopping pagination`);
+            break;
+          }
+
+          // Add only what we need to stay under the limit
+          const barsToAdd = Math.min(data.results.length, remainingSpace);
+          allResults.push(...data.results.slice(0, barsToAdd));
+          console.log(`[Polygon API] Page ${pageCount}: Received ${data.results.length} bars, added ${barsToAdd} (total: ${allResults.length})`);
+
+          // Stop if we've reached the limit
           if (allResults.length >= MAX_BARS_LIMIT) {
             console.log(`[Polygon API] Reached ${MAX_BARS_LIMIT} bars limit, stopping pagination`);
             break;
@@ -170,13 +181,6 @@ export const getForexAggregates = action({
 
       if (pageCount >= maxPages && nextUrl) {
         console.log("[Polygon API] WARNING: Reached max pages limit, more data may be available");
-      }
-
-      // Truncate results if we exceeded the limit (can happen if last page pushed us over)
-      // Since we're fetching desc (newest first), truncate keeps the newest bars
-      if (allResults.length > MAX_BARS_LIMIT) {
-        console.log(`[Polygon API] Truncating ${allResults.length} bars to ${MAX_BARS_LIMIT} to stay under Convex limit`);
-        allResults.splice(MAX_BARS_LIMIT);
       }
 
       console.log(`[Polygon API] Fetched ${allResults.length} total bars across ${pageCount} pages`);
