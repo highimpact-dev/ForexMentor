@@ -333,30 +333,18 @@ export default function ChartPage() {
         console.log(`[fetchChartData] Received ${formattedData.length} bars`);
         console.log(`[fetchChartData] First bar: ${new Date((firstBar.time as number) * 1000).toISOString()}`);
         console.log(`[fetchChartData] Last bar: ${new Date((lastBar.time as number) * 1000).toISOString()}`);
+        console.log(`[fetchChartData] Date range span: ${Math.round((lastBar.time as number - firstBar.time as number) / 86400)} days`);
       }
 
-      // Keep only the last 150 bars (most recent data)
-      const barsToShow = 150;
-      const recentData = formattedData.length > barsToShow
-        ? formattedData.slice(-barsToShow)
-        : formattedData;
-
-      if (recentData.length > 0) {
-        const firstRecent = recentData[0];
-        const lastRecent = recentData[recentData.length - 1];
-        console.log(`[fetchChartData] Showing ${recentData.length} bars`);
-        console.log(`[fetchChartData] Showing from: ${new Date((firstRecent.time as number) * 1000).toISOString()}`);
-        console.log(`[fetchChartData] Showing to: ${new Date((lastRecent.time as number) * 1000).toISOString()}`);
-      }
-
-      setChartData(recentData);
+      // Use all the data we received (no artificial limit)
+      setChartData(formattedData);
 
       // Track oldest timestamp
-      if (recentData.length > 0) {
-        const lastBar = recentData[recentData.length - 1];
+      if (formattedData.length > 0) {
+        const lastBar = formattedData[formattedData.length - 1];
         setCurrentPrice(lastBar.close);
 
-        const firstBar = recentData[0];
+        const firstBar = formattedData[0];
         oldestTimestampRef.current = firstBar.time as number;
       }
     } catch (error) {
@@ -908,7 +896,7 @@ export default function ChartPage() {
       {/* Main content area - stacks vertically on mobile, grid on desktop */}
       <div className={`flex flex-col lg:grid lg:flex-1 gap-4 lg:min-h-0 pb-4 lg:pb-0 transition-[grid-template-columns] duration-500 ease-in-out ${tradePanelCollapsed ? 'lg:grid-cols-[1fr_0px]' : 'lg:grid-cols-[1fr_320px]'}`}>
         {/* Chart area - takes most of the space */}
-        <div className="h-[50vh] lg:h-auto lg:min-h-0 min-w-0 relative">
+        <div className="h-[35vh] lg:h-auto lg:min-h-0 min-w-0 relative">
           <TradingChart
             data={chartData}
             symbol={selectedSymbol}
@@ -954,7 +942,7 @@ export default function ChartPage() {
 
         {/* Trade panel - full width on mobile, fixed width on desktop, collapsible on desktop */}
         <div className={`w-full lg:overflow-hidden transition-opacity duration-500 ${tradePanelCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="lg:overflow-y-auto h-full w-[320px]">
+          <div className="lg:overflow-y-auto h-full w-full lg:w-[320px]">
             <TradePanel
               symbol={selectedSymbol}
               currentPrice={currentPrice}

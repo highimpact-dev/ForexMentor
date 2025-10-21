@@ -180,90 +180,96 @@ export function ChartToolbar({
 
   return (
     <div className="border-b border-border bg-card">
-      {/* Main toolbar - Pair and Timeframe */}
-      <div className="flex items-center gap-3 px-4 py-2">
-        <TickerSelector value={selectedSymbol} onChange={onSymbolChange} />
+      {/* Main toolbar - Mobile: stacked, Desktop: single row */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 px-2 sm:px-4 py-2">
+        {/* Row 1: Pair selector and timeframe - always visible */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <TickerSelector value={selectedSymbol} onChange={onSymbolChange} />
 
-        <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-border hidden sm:block" />
 
-        <div className="flex gap-1.5">
-          {Object.entries(TIMEFRAMES).map(([key, config]) => (
-            <Button
-              key={key}
-              variant={selectedTimeframe === key ? "default" : "outline"}
-              size="sm"
-              onClick={() => onTimeframeChange(key as TimeframeKey)}
-              className="h-7 px-3 text-xs"
-            >
-              {config.label}
-            </Button>
-          ))}
-        </div>
-
-        <div className="h-6 w-px bg-border ml-auto" />
-
-        {/* Account info */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex flex-col items-end">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Balance</span>
-            <span className="font-semibold">${accountBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Equity</span>
-            <span className={`font-semibold ${equity > accountBalance ? 'text-green-500' : equity < accountBalance ? 'text-red-500' : ''}`}>
-              ${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Available</span>
-            <span className="font-semibold">${available.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <div className="flex gap-1">
+            {Object.entries(TIMEFRAMES).map(([key, config]) => (
+              <Button
+                key={key}
+                variant={selectedTimeframe === key ? "default" : "outline"}
+                size="sm"
+                onClick={() => onTimeframeChange(key as TimeframeKey)}
+                className="h-7 px-2 sm:px-3 text-xs"
+              >
+                {config.label}
+              </Button>
+            ))}
           </div>
         </div>
 
-        <div className="h-6 w-px bg-border" />
+        {/* Row 2 (Desktop only): Account info and tools */}
+        <div className="hidden lg:flex lg:items-center lg:gap-3 lg:ml-auto">
+          <div className="h-6 w-px bg-border" />
 
-        {/* Indicators button */}
-        <Button
-          size="sm"
-          variant={showIndicatorDialog ? "default" : "outline"}
-          onClick={() => setShowIndicatorDialog(!showIndicatorDialog)}
-          className="h-7 text-xs"
-        >
-          <Plus className="w-3 h-3 mr-1" />
-          Indicator
-        </Button>
+          {/* Account info - desktop only */}
+          <div className="flex items-center gap-4 text-xs">
+            <div className="flex flex-col items-end">
+              <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Balance</span>
+              <span className="font-semibold">${accountBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Equity</span>
+              <span className={`font-semibold ${equity > accountBalance ? 'text-green-500' : equity < accountBalance ? 'text-red-500' : ''}`}>
+                ${equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-muted-foreground text-[10px] uppercase tracking-wide">Available</span>
+              <span className="font-semibold">${available.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
 
-        {/* Drawing tools */}
-        <Button
-          size="sm"
-          variant={drawingMode === "horizontal-line" ? "default" : "outline"}
-          onClick={() => onModeChange(drawingMode === "horizontal-line" ? "none" : "horizontal-line")}
-          className="h-7 text-xs"
-        >
-          <Minus className="w-3 h-3 mr-1" />
-          H-Line
-        </Button>
+          <div className="h-6 w-px bg-border" />
 
-        <Button
-          size="sm"
-          variant={drawingMode === "trend-line" ? "default" : "outline"}
-          onClick={() => onModeChange(drawingMode === "trend-line" ? "none" : "trend-line")}
-          className="h-7 text-xs"
-        >
-          <TrendingUp className="w-3 h-3 mr-1" />
-          Trend
-        </Button>
+          {/* Indicators button */}
+          <Button
+            size="sm"
+            variant={showIndicatorDialog ? "default" : "outline"}
+            onClick={() => setShowIndicatorDialog(!showIndicatorDialog)}
+            className="h-7 text-xs"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Indicator
+          </Button>
 
-        {/* Chart settings */}
-        <Button
-          size="sm"
-          variant={showChartSettings ? "default" : "outline"}
-          onClick={() => setShowChartSettings(!showChartSettings)}
-          className="h-7 text-xs"
-        >
-          <Settings className="w-3 h-3 mr-1" />
-          Settings
-        </Button>
+          {/* Drawing tools */}
+          <Button
+            size="sm"
+            variant={drawingMode === "horizontal-line" ? "default" : "outline"}
+            onClick={() => onModeChange(drawingMode === "horizontal-line" ? "none" : "horizontal-line")}
+            className="h-7 text-xs"
+          >
+            <Minus className="w-3 h-3 mr-1" />
+            H-Line
+          </Button>
+
+          <Button
+            size="sm"
+            variant={drawingMode === "trend-line" ? "default" : "outline"}
+            onClick={() => onModeChange(drawingMode === "trend-line" ? "none" : "trend-line")}
+            className="h-7 text-xs"
+          >
+            <TrendingUp className="w-3 h-3 mr-1" />
+            Trend
+          </Button>
+
+          {/* Chart settings */}
+          <Button
+            size="sm"
+            variant={showChartSettings ? "default" : "outline"}
+            onClick={() => setShowChartSettings(!showChartSettings)}
+            className="h-7 text-xs"
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Settings
+          </Button>
+        </div>
       </div>
 
       {/* Active indicators and drawings */}

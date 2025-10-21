@@ -75,9 +75,9 @@ export function TradePanel({
   };
 
   return (
-    <Card className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-base sm:text-lg font-semibold">Place Trade</h3>
+    <Card className="p-3 sm:p-6 space-y-3 sm:space-y-6">
+      <div className="space-y-1 sm:space-y-2">
+        <h3 className="text-sm sm:text-lg font-semibold">Place Trade</h3>
         <p className="text-xs sm:text-sm text-muted-foreground">
           Current Price: <span className="font-mono font-semibold text-foreground">{formatPrice(currentPrice, pipSize)}</span>
         </p>
@@ -107,8 +107,8 @@ export function TradePanel({
       </div>
 
       {/* Risk Management */}
-      <div className="space-y-4">
-        <div className="space-y-2">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-1.5 sm:space-y-2">
           <Label htmlFor="risk">Risk Percentage</Label>
           <div className="flex items-center gap-2">
             <Input
@@ -134,7 +134,7 @@ export function TradePanel({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           <Label htmlFor="stopLoss">Stop Loss (pips)</Label>
           <Input
             id="stopLoss"
@@ -148,7 +148,7 @@ export function TradePanel({
           </p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           <Label htmlFor="takeProfit">Take Profit (pips)</Label>
           <Input
             id="takeProfit"
@@ -166,10 +166,10 @@ export function TradePanel({
       </div>
 
       {/* Trade Summary */}
-      <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
-        <h4 className="font-semibold text-sm">Trade Summary</h4>
+      <div className="border rounded-lg p-2.5 sm:p-4 space-y-2 sm:space-y-3 bg-muted/50">
+        <h4 className="font-semibold text-xs sm:text-sm">Trade Summary</h4>
 
-        <div className="space-y-2 text-sm">
+        <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Position Size:</span>
             <span className="font-mono font-semibold">{positionSize.toFixed(2)} lots</span>
